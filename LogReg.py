@@ -3,18 +3,56 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
 
-# Функция для тренировки модели логистической регрессии
-def train_model(X, y):
-    model = LogisticRegression()
+# Класс логистической регрессии
+class LogReg:
+    def __init__(self, learning_rate, n_epochs=10000):
+        self.learning_rate = learning_rate
+        self.n_epochs = n_epochs
+
+    def sigmoid(self, z):
+        return 1 / (1 + np.exp(-z))
+
+    def fit(self, X, y):
+        X = np.array(X)  # Переведем в numpy для матричных преобразований
+        y = np.array(y)
+
+        self.coef_ = np.random.uniform(-1, 1, size=X.shape[1])
+        self.intercept_ = np.random.uniform(-1, 1)
+
+        for epoch in range(self.n_epochs):
+            # Вычисляем линейную комбинацию входов и весов
+            z = X @ self.coef_ + self.intercept_
+
+            # Применяем сигмоидную функцию
+            y_pred = self.sigmoid(z)
+
+            # Вычисляем градиенты
+            w0_grad = (y_pred - y)
+            w_grad = X * (y_pred - y).reshape(-1, 1)
+
+            # Обновляем параметры, используя коэффициент скорости обучения
+            self.coef_ -= self.learning_rate * w_grad.mean(axis=0)
+            self.intercept_ -= self.learning_rate * w0_grad.mean()
+
+    def predict(self, X):
+        y_pred = self.sigmoid(X @ self.coef_ + self.intercept_)
+        return y_pred
+
+    def score(self, X, y):
+        y_pred = np.round(self.predict(X))
+        return (y == y_pred).mean()
+
+# Функция для тренировки модели
+def train_model(X, y, learning_rate, n_epochs):
+    model = LogReg(learning_rate=learning_rate, n_epochs=n_epochs)
     model.fit(X, y)
     return model
 
 # Интерфейс для загрузки файла
-st.title("Simple Logistic Regression App")
+st.title("Logistic Regression")
 
-uploaded_file = st.file_uploader("Upload a CSV file", type="csv")
+uploaded_file = st.file_uploader("Upload a CSV file for training", type="csv")
 
 if uploaded_file:
     # Чтение данных из загруженного файла
@@ -28,18 +66,22 @@ if uploaded_file:
     if features and target:
         X = data[features]
         y = data[target]
-        
+
+        # Параметры модели
+        learning_rate = st.number_input("Learning Rate", value=0.01, step=0.01)
+        n_epochs = st.number_input("Number of Epochs", value=1000, step=100)
+
         # Нормализация данных
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
         
         # Тренировка модели
-        model = train_model(X_scaled, y)
+        model = train_model(X_scaled, y, learning_rate, n_epochs)
         
         # Вывод весов модели
-        coef_dict = {feature: coef for feature, coef in zip(features, model.coef_[0])}
-        st.write("Regression Coefficients", coef_dict)
-        
+        coef_str = " + ".join([f"{np.round(coef, 4)} * {feature}" for coef, feature in zip(model.coef_, features)])
+        st.write(f'Personal.Loan = {coef_str} + {np.round(model.intercept_, 4)}')
+
         # Scatter plot
         feature_x = st.selectbox("Select feature for x-axis", features)
         feature_y = st.selectbox("Select feature for y-axis", features)
@@ -52,3 +94,22 @@ if uploaded_file:
             legend1 = ax.legend(*scatter.legend_elements(), title=target)
             ax.add_artist(legend1)
             st.pyplot(fig)
+
+        # Загрузка тестового датасета
+        uploaded_test_file = st.file_uploader("Upload a CSV file for testing", type="csv")
+        if uploaded_test_file:
+            test_data = pd.read_csv(uploaded_test_file)
+            st.write("Test Dataset", test_data)
+
+            if all(feature in test_data.columns for feature in features):
+                X_test = test_data[features]
+                y_test = test_data[target]
+
+                # Нормализация тестовых данных
+                X_test_scaled = scaler.transform(X_test)
+
+                # Расчет точности модели
+                accuracy = model.score(X_test_scaled, y_test)
+                st.write(f'Accuracy: {accuracy}')
+            else:
+                st.write("Test dataset does not contain all the required features.")
