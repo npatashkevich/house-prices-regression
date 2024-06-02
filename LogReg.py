@@ -109,7 +109,28 @@ if uploaded_file:
                 X_test_scaled = scaler.transform(X_test)
 
                 # Расчет точности модели
-                accuracy = model.score(X_test_scaled, y_test)
-                st.write(f'Accuracy: {accuracy}')
+                accuracy_train = model.score(X_scaled, y)
+                accuracy_test = model.score(X_test_scaled, y_test)
+                st.write(f'Accuracy train-set: {accuracy_train}')
+                st.write(f'Accuracy test-set: {accuracy_test}')
             else:
                 st.write("Test dataset does not contain all the required features.")
+
+            # Вместо загрузки тестового датасета
+            prediction_data = st.text_area("Enter data for prediction (each row as comma-separated values):")
+
+            if prediction_data:
+                # Преобразование введенных данных в датафрейм
+                prediction_lines = prediction_data.strip().split('\n')
+                prediction_values = [list(map(float, line.split(','))) for line in prediction_lines]
+                prediction_df = pd.DataFrame(prediction_values, columns=X.columns)
+                
+                # Нормализация предсказательных данных
+                X_pred_scaled = scaler.transform(prediction_df)
+                
+                # Получение предсказаний
+                predictions = model.predict(X_pred_scaled)
+                
+                # Вывод предсказаний
+                st.write("Predictions:")
+                st.write(predictions)
