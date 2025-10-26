@@ -7,7 +7,7 @@ Reproducible sklearn pipeline with **log-target training**, solid **cross-valida
 
 ## Results
 - **Public LB:** **0.12622** (RMSLE)
-- **CV (log-RMSE):** paste your last run output here, e.g. `mean=0.13xx ± 0.00xx`
+- **CV (log-RMSE):** mean=0.1351 ± 0.0188
 
 > We train on `log1p(SalePrice)` and evaluate RMSE in log space (≈ RMSLE). For submission we apply `expm1` back-transform.
 
